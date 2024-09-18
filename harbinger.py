@@ -10,12 +10,6 @@ folder_path = filedialog.askdirectory(title="Select a folder containing CSV file
 
 prediction_year = int(input("Prediction year: "))
 
-# Load model directly
-from transformers import AutoTokenizer, AutoModelForQuestionAnswering
-
-tokenizer = AutoTokenizer.from_pretrained("distilbert/distilbert-base-cased-distilled-squad")
-qa_model = AutoModelForQuestionAnswering.from_pretrained("distilbert/distilbert-base-cased-distilled-squad")
-
 # Function to choose a random CSV file from a directory, searching recursively
 def choose_random_file_recursive():
     root = tk.Tk()
