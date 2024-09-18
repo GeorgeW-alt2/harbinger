@@ -119,9 +119,9 @@ while True:
                 future_pred = regression_model.predict(future_year)
 
                 # Determine if the future prediction is higher or lower
-                comparison = "higher" if future_pred[0] > last_value else "lower"
+                comparison = "increasing" if future_pred[0] > last_value else "decreasing"
 
-                print(f"{target_col} in year {year} went {comparison}.")
+                print(f"{target_col} in year {year} is {comparison}.")
                 
             else:
                 print("Could not proceed due to invalid column names.")
