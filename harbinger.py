@@ -1,3 +1,6 @@
+import google.generativeai as genai
+genai.configure(api_key="")
+
 import os
 import random
 import pandas as pd
@@ -9,6 +12,20 @@ from tkinter import filedialog
 folder_path = filedialog.askdirectory(title="Select a folder containing CSV files")
 
 prediction_year = int(input("Prediction year: "))
+
+def append_message_to_file(filename, message):
+    """
+    Appends a message to a text file.
+
+    Parameters:
+    filename (str): The name of the file to which the message will be appended.
+    message (str): The message to append to the file.
+    """
+    with open(filename, 'a') as file:
+        file.write(message + '\n')
+
+# Example usage
+file_path = 'log.txt'
 
 # Function to choose a random CSV file from a directory, searching recursively
 def choose_random_file_recursive():
@@ -120,8 +137,16 @@ while True:
 
                 # Determine if the future prediction is higher or lower
                 comparison = "increasing" if future_pred[0] > last_value else "decreasing"
+                prompt = f"write a comment imitating an adult talking about {target_col} in year {year} is {comparison}."
 
-                print(f"{target_col} in year {year} is {comparison}.")
+
+
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                response = model.generate_content(prompt)
+                print(response.text)
+                
+                append_message_to_file(file_path, response.text)
+
                 
             else:
                 print("Could not proceed due to invalid column names.")
