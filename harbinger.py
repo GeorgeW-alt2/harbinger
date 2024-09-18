@@ -1,132 +1,104 @@
-import requests
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
+import tkinter as tk
+from tkinter import filedialog
 
-# Function to fetch and display available country codes from the World Bank API
-def fetch_country_codes():
-    print("Fetching all country codes from the World Bank API...")
-    
-    # Endpoint to fetch all countries
-    endpoint = 'https://api.worldbank.org/v2/country?format=json&per_page=500'
-    
-    response = requests.get(endpoint)
-    data = response.json()
+# Function to let user choose a file
+def choose_file():
+    root = tk.Tk()
+    root.withdraw()  # Hide the root window
 
-    # The data is in the second part; it contains the countries
-    countries = pd.DataFrame(data[1])
-    
-    # Select relevant columns: id and name (country code and country name)
-    countries = countries[['id', 'name']]
-    
-    # Display countries in a labeled list
-    print("\nAvailable Countries:\n")
-    for index, row in countries.iterrows():
-        print(f"{index+1}. {row['id']} - {row['name']}")
-    
-    return countries
+    file_path = filedialog.askopenfilename(
+        filetypes=[("CSV files", "*.csv")],
+        title="Select a CSV file"
+    )
 
-# Function to fetch and display available indicators from the World Bank API
-def fetch_indicators():
-    print("Fetching all indicators from the World Bank API...")
-    
-    # Endpoint to fetch all indicators
-    endpoint = 'https://api.worldbank.org/v2/indicator?format=json&per_page=99999'
-    
-    response = requests.get(endpoint)
-    data = response.json()
+    if file_path:
+        print(f"Selected file: {file_path}")
+        return file_path
+    else:
+        print("No file selected.")
+        return None
 
-    # The data is in two parts; the second part contains the indicators
-    indicators = pd.DataFrame(data[1])
+# Function to fetch dataset from selected file
+def fetch_dataset(file_path):
+    print(f"Fetching dataset from {file_path}...")
     
-    # Select relevant columns: id and name (indicator code and description)
-    indicators = indicators[['id', 'name']]
+    # Fetch dataset as DataFrame
+    df = pd.read_csv(file_path)
     
-    # Display indicators in a labeled list
-    print("\nAvailable Indicators:\n")
-    for index, row in indicators.iterrows():
-        print(f"{index+1}. {row['id']} - {row['name']}")
+    print("\nDataset Columns:", df.columns)
     
-    return indicators
+    return df
+
+# Function to let user choose columns for features and target
+def choose_columns(df):
+    print("\nAvailable columns in the dataset:")
+    print(df.columns.tolist())  # Convert to list for readability
+    
+    feature_col = input("Enter the name of the column to use as the feature (e.g., 'year'): ")
+    target_col = input("Enter the name of the column to use as the target (e.g., 'co2'): ")
+    
+    if feature_col in df.columns and target_col in df.columns:
+        return feature_col, target_col
+    else:
+        print("Invalid column names provided.")
+        return None, None
+
+file_path = []
 while True:
-    while True:
-
-        # Fetch and display the available indicators
-        indicators = fetch_indicators()
-
-        # Select an indicator based on user input from the available list
-        selected_index = int(input("\nEnter the number corresponding to your desired indicator: ")) - 1
-        selected_indicator = indicators.iloc[selected_index]['id']
-
-        print(f"\nYou selected: {selected_indicator} - {indicators.iloc[selected_index]['name']}")
-        input("Press enter to continue.")
-        # Fetch and display the available country codes
-        countries = fetch_country_codes()
-
-        # Select a country based on user input from the available list
-        selected_country_index = int(input("\nEnter the number corresponding to your desired country: ")) - 1
-        selected_country = countries.iloc[selected_country_index]['id']
-        print(f"\nYou selected: {selected_country} - {countries.iloc[selected_country_index]['name']}")
-        input("Press enter to continue.")
-        # Step 1: Fetch Data from the World Bank API
-        country_code = selected_country  # Selected country code
-        indicator_code = selected_indicator  # Selected indicator code
-        endpoint = f'https://api.worldbank.org/v2/country/{country_code}/indicator/{indicator_code}?format=json&per_page=100'
-
-        response = requests.get(endpoint)
-        data = response.json()
-
-        # Step 2: Inspect the data structure
-        if len(data) < 2 or not isinstance(data[1], list):
-            print(f"No data available for the selected country: {country_code} and indicator: {indicator_code}")
-            input("Press enter to continue.")
-            break
+    # Let user choose file
+    if input("Select CSV file? [y/n]:").lower() =="y":
         
-        df = pd.DataFrame(data[1])
-        print("\nRaw Data Columns:", df.columns)
+        file_path = choose_file()
+    
+    if file_path:
+        # Fetch dataset
+        df = fetch_dataset(file_path)
 
-        # Step 3: Check and convert relevant columns
-        if 'date' in df.columns and 'value' in df.columns:
-            df = df[['date', 'value']]
+        # Let user choose columns
+        feature_col, target_col = choose_columns(df)
 
-            # Convert year to numeric and sort by year
-            df['date'] = pd.to_numeric(df['date'])
-            df = df.sort_values(by='date')
+        if feature_col and target_col:
+            df = df[[feature_col, target_col]]
+
+            # Convert feature to numeric if necessary and sort by feature
+            df[feature_col] = pd.to_numeric(df[feature_col], errors='coerce')
+            df = df.sort_values(by=feature_col)
 
             # Drop rows with missing values
             df.dropna(inplace=True)
+
+            # Preprocess Data
+            X = df[[feature_col]]  # Feature
+            y = df[target_col]     # Target value
+
+            # Split the data into training and testing sets
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+            # Train the Model
+            model = LinearRegression()
+            model.fit(X_train, y_train)
+
+            # Make Predictions
+            y_pred = model.predict(X_test)
+
+            # Evaluate the Model
+            print('Mean Squared Error:', mean_squared_error(y_test, y_pred))
+            print('R^2 Score:', r2_score(y_test, y_pred))
+
+            # Display the value for the Last Year Available
+            last_value = df[df[feature_col] == df[feature_col].max()][target_col].values[0]
+            print(f"{target_col} value for the last available {feature_col} ({df[feature_col].max()}): {last_value}")
+
+            # Make Future Predictions
+            year = int(input("Year for prediction: "))
+            future_year = pd.DataFrame([[year]], columns=[feature_col])
+            future_pred = model.predict(future_year)
+            print(f"Predicted {target_col} value for year: {future_pred[0]}")
         else:
-            print("Required columns ('date', 'value') not found in the data.")
-            print("Available columns in the data:", df.columns)
-            input("Press enter to continue.")
-            break
-
-        # Step 4: Preprocess Data
-        X = df[['date']]  # Year as the only feature
-        y = df['value']   # Death rate (or other target value)
-
-        # Split the data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        # Step 5: Train the Model
-        model = LinearRegression()
-        model.fit(X_train, y_train)
-
-        # Step 6: Make Predictions
-        y_pred = model.predict(X_test)
-
-        # Step 7: Evaluate the Model
-        print('Mean Squared Error:', mean_squared_error(y_test, y_pred))
-        print('R^2 Score:', r2_score(y_test, y_pred))
-
-        # Step 8: Display the value for the Last Year Available
-        last_year = df['date'].max()
-        last_year_value = df[df['date'] == last_year]['value'].values[0]
-        print(f"Value for the last available year ({last_year}): {last_year_value}")
-
-        # Step 9: Make Future Predictions
-        future_year = pd.DataFrame([[2025]], columns=['date'])
-        future_pred = model.predict(future_year)
-        print(f"Predicted value for 2025: {future_pred[0]}")
-        input("Press enter to continue.")
+            print("Could not proceed due to invalid column names.")
+    else:
+        print("No file was selected.")
