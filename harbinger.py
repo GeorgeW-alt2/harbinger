@@ -31,11 +31,6 @@ def fetch_dataset(file_path):
     
     print("\nDataset Columns:", df.columns)
     
-    # Show unique values in each column
-    for column in df.columns:
-        print(f"\nUnique values in column '{column}':")
-        print(df[column].unique())
-    
     return df
 
 # Function to let user choose columns for features and target
@@ -55,7 +50,8 @@ def choose_columns(df):
 file_path = []
 while True:
     # Let user choose file
-    if input("Select CSV file? [y/n]:").lower() == "y":
+    if input("Select CSV file? [y/n]:").lower() =="y":
+        
         file_path = choose_file()
     
     if file_path:
@@ -97,24 +93,11 @@ while True:
             last_value = df[df[feature_col] == df[feature_col].max()][target_col].values[0]
             print(f"{target_col} value for the last available {feature_col} ({df[feature_col].max()}): {last_value}")
 
-            # Make Future Predictions over a range of years
-            future_years = range(int(df[feature_col].max()) + 1, int(df[feature_col].max()) + 11)  # Next 10 years
-            future_year_df = pd.DataFrame(future_years, columns=[feature_col])
-            future_preds = model.predict(future_year_df)
-
-            # Find the index of the maximum prediction
-            max_index = future_preds.argmax()
-            max_year = future_years[max_index]
-            max_pred = future_preds[max_index]
-
-            print(f"Year with maximum predicted {target_col}: {max_year}")
-            print(f"Maximum predicted {target_col} value: {max_pred}")
-
-            # Optionally make a prediction for a specific year
+            # Make Future Predictions
             year = int(input("Year for prediction: "))
             future_year = pd.DataFrame([[year]], columns=[feature_col])
             future_pred = model.predict(future_year)
-            print(f"Predicted {target_col} value for year {year}: {future_pred[0]}")
+            print(f"Predicted {target_col} value for year: {future_pred[0]}")
         else:
             print("Could not proceed due to invalid column names.")
     else:
